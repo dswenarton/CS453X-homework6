@@ -10,11 +10,12 @@ def fpc(y, yhat):
     return float(num_correct) / size
 
 def calculateCrossEntropy(y, yhat):
-	size = y.shape[1]
-	return -(0.1/size) * np.sum(y*np.log(yhat.T))
+    size = y.shape[1]
+    return -(0.1/size) * np.sum(y*np.log(yhat.T))
 
-def trainNN(training_faces, training_labels):
-	state = np.random.get_state()
+def trainNN(trainingFaces, trainingLabels):
+    sd = 0.01
+    state = np.random.get_state()
     np.random.shuffle(trainingFaces)
     np.random.set_state(state)
     np.random.shuffle(trainingLabels)
@@ -24,18 +25,21 @@ def trainNN(training_faces, training_labels):
     trainingFaces = trainingFaces[arrangement]
     trainingLabels = trainingLabels[arrangement]
 
+    trainingFaces = np.vstack((trainingFaces.T, np.ones(trainingFaces.shape[0])*0.01))
+    print(trainingFaces.shape);
+
     weights = np.random.rand(784, 10) * sd
     wold = np.copy(weights)
     wnew = np.copy(weights)
 
 
 if __name__ == "__main__":
-    training_faces = np.load("mnist_train_images.npy")
-	training_labels = np.load("mnist_train_labels.npy")
-	validation_faces = np.load("mnist_validation_images.npy")
-	validation_labels = np.load("mnist_validation_labels.npy")
-    testing_faces = np.load("mnist_test_images.npy")
-    testing_labels = np.load("mnist_test_labels.npy")
+    training_faces = np.load("mnist/mnist_train_images.npy")
+    training_labels = np.load("mnist/mnist_train_labels.npy")
+    #validation_faces = np.load("mnist/mnist_validation_images.npy")
+    #validation_labels = np.load("mnist/mnist_validation_labels.npy")
+    testing_faces = np.load("mnist/mnist_test_images.npy")
+    testing_labels = np.load("mnist/mnist_test_labels.npy")
 
     weights = trainNN(training_faces, training_labels)
 
