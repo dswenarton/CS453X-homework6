@@ -1,3 +1,4 @@
+import math as math
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -14,7 +15,9 @@ def calculateCrossEntropy(y, yhat):
     return -(0.1/size) * np.sum(y*np.log(yhat.T))
 
 def trainNN(trainingFaces, trainingLabels):
-    sd = 0.01
+    print(trainingFaces.shape[1]+1)
+    sd = 1/math.sqrt(trainingFaces.shape[1]+1)
+
     state = np.random.get_state()
     np.random.shuffle(trainingFaces)
     np.random.set_state(state)
@@ -28,9 +31,56 @@ def trainNN(trainingFaces, trainingLabels):
     trainingFaces = np.vstack((trainingFaces.T, np.ones(trainingFaces.shape[0])*0.01))
     print(trainingFaces.shape);
 
-    weights = np.random.rand(784, 10) * sd
-    wold = np.copy(weights)
-    wnew = np.copy(weights)
+    X = trainingFaces.T
+    y = trainingLabels.T
+
+    learning_rate = 0.1
+    nt = 100
+    n = trainingLabels.shape[0]
+    num_batches = int(n/nt)
+
+    weights = np.random.rand(X.shape[1], 10) * sd
+    weights[-1] = 0.01
+
+    w1old = np.copy(weights)
+    w1new = np.copy(weights)
+    w2old = np.copy(weights)
+    w2new = np.copy(weights)
+
+    z1 = w1old.T.dot(X.T)
+    #h1 = 
+    #z2 = w2old.T.dot(h1.T)
+
+
+    for e in range(101):
+        curr_index = 0
+        for batch in range(num_batches):
+            Z = wnew.T.dot(X[:,curr_index:curr_index+nt])
+            batch_yhat = calculateYhat(Z)
+            batch_y = y[:,curr_index:curr_index+nt]
+            gradient = calculateGradient((X[:, curr_index:curr_index+nt]), batch_y, batch_yhat.T, nt)
+
+            wold = np.copy(wnew)
+            wnew = wold - (learning_rate * gradient)
+            curr_index += nt
+        Z = wnew.T.dot(X)
+        yhat = calculateYhat(Z)
+        pc = fpc(y, yhat)
+        cross = calculateCrossEntropy(y,yhat)
+        if e >= 80:
+            print("***  Epoch " + str(e) + " Statistics  ***")
+            print("FPC = " + str(pc))
+            print("Cross Entropy = " + str(cross))
+            print()
+
+    Z_test = wnew.T.dot(testingFaces.T)
+    yhat_test = calculateYhat(Z_test)
+    pc_test = fpc(testingLabels.T, yhat_test)
+    cross_test = calculateCrossEntropy(testingLabels.T,yhat_test)
+
+    print ("*** Testing Set Results ***")
+    print("FPC = " + str(pc_test))
+    print("Cross Entropy = " + str(cross_test))
 
 
 if __name__ == "__main__":
