@@ -14,9 +14,35 @@ def calculateCrossEntropy(y, yhat):
     size = y.shape[1]
     return -(0.1/size) * np.sum(y*np.log(yhat.T))
 
+def calculateYhat(Z):
+    sums = np.sum(np.exp(Z), axis=1)
+    return (np.exp(Z).T/sums[None,:])[::-1]
+
+def forwardProp(X, w1new, w2new):
+    print("X shape is " + str(X.shape))
+    print("w1new shape is " + str(w1new.shape))
+    z1 = w1new.T.dot(X)
+    h1 = np.copy(z1)
+    h1[h1 <= 0] = 0
+    #h1[h1 > 0] = 1   # this line makes it relu prime if not commented
+    z2 = w2new.dot(h1)
+
+    return calculateYhat(z2), z1
+
+def calcGradient(yhat, y, w2, z1):
+    diff = yhat.T - y
+    diff = diff.dot(w2)
+    z1t = z1.T
+    z1t[z1t <= 0] = 0
+    z1t[z1t > 0] = 1
+    return diff * z1t
+
+
 def trainNN(trainingFaces, trainingLabels):
-    print(trainingFaces.shape[1]+1)
     sd = 1/math.sqrt(trainingFaces.shape[1]+1)
+
+    print(trainingFaces.shape)
+    print(trainingLabels.shape)
 
     state = np.random.get_state()
     np.random.shuffle(trainingFaces)
@@ -28,18 +54,18 @@ def trainNN(trainingFaces, trainingLabels):
     trainingFaces = trainingFaces[arrangement]
     trainingLabels = trainingLabels[arrangement]
 
-    trainingFaces = np.vstack((trainingFaces.T, np.ones(trainingFaces.shape[0])*0.01))
+    trainingFaces = np.vstack((trainingFaces, np.ones(trainingFaces.shape[1])*0.01))
     print(trainingFaces.shape);
 
-    X = trainingFaces.T
-    y = trainingLabels.T
+    X = trainingFaces
+    y = trainingLabels
 
     learning_rate = 0.1
     nt = 100
     n = trainingLabels.shape[0]
     num_batches = int(n/nt)
 
-    weights = np.random.rand(X.shape[1], 10) * sd
+    weights = np.random.rand(X.shape[0], 10) * sd
     weights[-1] = 0.01
 
     w1old = np.copy(weights)
@@ -47,18 +73,18 @@ def trainNN(trainingFaces, trainingLabels):
     w2old = np.copy(weights)
     w2new = np.copy(weights)
 
-    z1 = w1old.T.dot(X.T)
-    #h1 = 
-    #z2 = w2old.T.dot(h1.T)
-
 
     for e in range(101):
         curr_index = 0
         for batch in range(num_batches):
-            Z = wnew.T.dot(X[:,curr_index:curr_index+nt])
-            batch_yhat = calculateYhat(Z)
-            batch_y = y[:,curr_index:curr_index+nt]
-            gradient = calculateGradient((X[:, curr_index:curr_index+nt]), batch_y, batch_yhat.T, nt)
+            batch_X = X[:,curr_index:curr_index+nt]
+            batch_yhat, z1 = forwardProp(batch_X, w1new, w2new)
+            print("batch yhat size is " + str(batch_yhat.shape))
+            batch_y = y[curr_index:curr_index+nt,:]
+
+            gradient = calcGradient(batch_yhat, batch_y, w2new, z1)
+            jacobian = gradient.T.dot(batch_X.T)
+            print(jacobian.shape)
 
             wold = np.copy(wnew)
             wnew = wold - (learning_rate * gradient)
@@ -91,5 +117,5 @@ if __name__ == "__main__":
     testing_faces = np.load("mnist/mnist_test_images.npy")
     testing_labels = np.load("mnist/mnist_test_labels.npy")
 
-    weights = trainNN(training_faces, training_labels)
+    weights = trainNN(training_faces.T, training_labels)
 
