@@ -3,24 +3,24 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-def fpc(y, yhat):
-    print(y.shape)
-    print(yhat.shape)
+def fPC (y, yhat):
+    yhat = np.argmax(yhat, axis=0)
+    y = np.argmax(y, axis=0)
+    n = y.size
+    diff = y - yhat
+    diff[diff!=0] = 1 
+    num_correct = n - np.sum(diff)
+    return num_correct/n
 
-    yhat = np.argmax(yhat, axis=1)
-    y = np.argmax(y, axis=1)
-    size = len(y)
-    num_correct = size - (np.nonzero(y - yhat)[0].shape[0])
-    return float(num_correct) / size
-
-def softmax(z):
-    # e_x = np.exp(x - np.max(x))
-    # return e_x / np.sum(e_x, axis=0) #col-wise
-    return (np.exp(z.T) / np.sum(np.exp(z), axis=1)).T
+def softmax(x):
+    e_x = np.exp(x - np.max(x))
+    return e_x / np.sum(e_x, axis=0) #col-wise
+    # return (np.exp(z.T) / np.sum(np.exp(z), axis=1)).T
 
 def relu(x):
-    x[x <= 0] = 0
-    return x
+    xx= np.copy(x)
+    xx[xx <= 0] = 0
+    return xx
 
 def calculateCrossEntropy(y, yhat):
     size = y.shape[1]
@@ -34,25 +34,29 @@ def forwardProp(X, w1new, w2new, b1new, b2new):
     yhat = softmax(z2)
     return yhat, z1out, h1
 
-def backProp(X, yhat, y, w2, z1, h1):
-    diff = np.mean((yhat-y), axis=0)
+def backProp(X, yhat, y, w2, z1, h1, batch_size):
+    diff = (yhat-y).T
     diff = diff.dot(w2)
     z1t = z1.T
     z1t[z1t <= 0] = 0
-    z1t[z1t > 0] = 1
-
+    z1t[z1t > 0]  = 1
     gt = diff * z1t
-    gb1 = gt.T
-    gw1 = gb1.dot(X.T)
-    gb2 = yhat - y.T 
-    gw2 = gb2.dot(h1.T)
+    
+    gb1 = np.mean(gt.T, axis=1)
+    gb2 = np.mean(yhat - y, axis=1)
+    gb1 = gb1.reshape((len(gb1), 1))
+    gb2 = gb2.reshape((len(gb2), 1))
+    gw1 = gt.T.dot(X.T)* (1./batch_size)
+    gw2 = (yhat - y).dot(h1.T)*(1./batch_size)
+    print("gw1 = ", gw1)
+    print("gw2 = ", gw2)
     return gb1, gb2, gw1, gw2
 
 
 def trainNN(trainingFaces, trainingLabels):
     hidden_nodes = 50
-    sd1 = 1/math.sqrt(trainingFaces.shape[0])
-    sd2 = 1/math.sqrt(hidden_nodes)
+    sd1 = 1./math.sqrt(trainingFaces.shape[1])
+    sd2 = 1./math.sqrt(hidden_nodes)
 
     state = np.random.get_state()
     np.random.shuffle(trainingFaces)
@@ -69,11 +73,12 @@ def trainNN(trainingFaces, trainingLabels):
 
     learning_rate = 0.1
     batch_size = 15
-    n = trainingLabels.shape[0]
+    epochs = 50
+    n = trainingLabels.shape[1]
     num_batches = int(n/batch_size)
 
-    weights = np.random.rand(hidden_nodes, X.shape[0]) * sd1
-    weights2 = np.random.rand(10,hidden_nodes) * sd2
+    weights = np.random.randn(hidden_nodes, X.shape[0]) * sd1
+    weights2 = np.random.randn(10,hidden_nodes) * sd2
     biases  = np.ones(hidden_nodes).reshape((hidden_nodes,1)) * .01
     biases2 = np.ones(10).reshape((10,1))  * .01
 
@@ -87,15 +92,15 @@ def trainNN(trainingFaces, trainingLabels):
     b2old = np.copy(biases2)
 
 
-    for e in range(101):
+    for e in range(epochs):
         curr_index = 0
         for batch in range(num_batches):
             batch_X = X[:,curr_index:curr_index+batch_size]
+            batch_y = y[:,curr_index:curr_index+batch_size]
 
             batch_yhat, z1, h1 = forwardProp(batch_X, w1new, w2new, b1new, b2new)
-            batch_y = y[curr_index:curr_index+batch_size,:]
-
-            gb1, gb2, gw1, gw2 = backProp(batch_X, batch_yhat, batch_y, w2new, z1, h1)
+            
+            gb1, gb2, gw1, gw2 = backProp(batch_X, batch_yhat, batch_y, w2new, z1, h1, batch_size)
             
             w1old = np.copy(w1new)
             w2old = np.copy(w2new)
@@ -108,9 +113,13 @@ def trainNN(trainingFaces, trainingLabels):
             b2new = b2old - (learning_rate * gb2)
             curr_index += batch_size
 
-        print(X.shape)
+        print("X  = ", X.shape)
+        print("w1 = ", w1new.shape)
+        print("w2 = ", w2new.shape)
+        print("b1 = ", b1new.shape)
+        print("b2 = ", b2new.shape)
         yhat, z1, h1 = forwardProp(X, w1new, w2new, b1new, b2new)
-        pc = fpc(y, yhat)
+        pc = fPC(y, yhat)
         cross = 1#calculateCrossEntropy(y,yhat)
         if e >= 0:
             print("***  Epoch " + str(e) + " Statistics  ***")
@@ -136,5 +145,5 @@ if __name__ == "__main__":
     testing_faces = np.load("mnist/mnist_test_images.npy")
     testing_labels = np.load("mnist/mnist_test_labels.npy")
 
-    weights = trainNN(training_faces.T, training_labels)
+    weights = trainNN(training_faces.T, training_labels.T)
 
