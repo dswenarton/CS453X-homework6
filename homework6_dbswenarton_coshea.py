@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 def fPC (y, yhat):
     yhat = np.argmax(yhat, axis=0)
     y = np.argmax(y, axis=0)
-    n = y.size
+    n = float(y.size)
     diff = y - yhat
     diff[diff!=0] = 1 
     num_correct = n - np.sum(diff)
@@ -14,25 +14,24 @@ def fPC (y, yhat):
 
 def softmax(x):
     e_x = np.exp(x - np.max(x))
-    return e_x / np.sum(e_x, axis=0) #col-wise
-    # return (np.exp(z.T) / np.sum(np.exp(z), axis=1)).T
+    return e_x / np.sum(e_x, axis=0) 
 
 def relu(x):
-    xx= np.copy(x)
-    xx[xx <= 0] = 0
-    return xx
+    X= np.copy(x)
+    X[X <= 0] = 0
+    return X
 
 def calculateCrossEntropy(y, yhat):
     size = y.shape[1]
-    return -(0.1/size) * np.sum(y*np.log(yhat.T))
+    return -(0.1/size) * np.sum(y*np.log(yhat))
 
 def forwardProp(X, w1new, w2new, b1new, b2new):
     z1 = w1new.dot(X) + b1new
-    z1out = np.copy(z1)
+    #z1out = np.copy(z1)
     h1 = relu(z1)
     z2 = w2new.dot(h1) + b2new
     yhat = softmax(z2)
-    return yhat, z1out, h1
+    return yhat, z1, h1
 
 def backProp(X, yhat, y, w2, z1, h1, batch_size):
     diff = (yhat-y).T
@@ -48,33 +47,43 @@ def backProp(X, yhat, y, w2, z1, h1, batch_size):
     gb2 = gb2.reshape((len(gb2), 1))
     gw1 = gt.T.dot(X.T)* (1./batch_size)
     gw2 = (yhat - y).dot(h1.T)*(1./batch_size)
-    print("gw1 = ", gw1)
-    print("gw2 = ", gw2)
     return gb1, gb2, gw1, gw2
 
 
-def trainNN(trainingFaces, trainingLabels):
-    hidden_nodes = 50
-    sd1 = 1./math.sqrt(trainingFaces.shape[1])
+def trainNN(trainingFaces, trainingLabels, testingFaces, testingLabels):
+    X = trainingFaces
+    y = trainingLabels
+
+    hidden_nodes = 40
+    learning_rate = 0.1
+    batch_size = 16
+    epochs = 30
+    
+    n = y.shape[1]
+    num_batches = int(n/batch_size)
+
+    sd1 = 1./math.sqrt(X.shape[1])
     sd2 = 1./math.sqrt(hidden_nodes)
 
     state = np.random.get_state()
-    np.random.shuffle(trainingFaces)
+    np.random.shuffle(X)
     np.random.set_state(state)
-    np.random.shuffle(trainingLabels)
+    np.random.shuffle(y)
+
+    # state = np.random.get_state()
+    # np.random.shuffle(testingFaces)
+    # np.random.set_state(state)
+    # np.random.shuffle(testingLabels)
 
     # arrangement = np.arange(trainingFaces.shape[0])
     # np.random.shuffle(arrangement)
     # trainingFaces = trainingFaces[arrangement]
     # trainingLabels = trainingLabels[arrangement]
 
-    X = trainingFaces
-    y = trainingLabels
-
     learning_rate = 0.1
-    batch_size = 15
-    epochs = 50
-    n = trainingLabels.shape[1]
+    batch_size = 16
+    epochs = 30
+    n = y.shape[1]
     num_batches = int(n/batch_size)
 
     weights = np.random.randn(hidden_nodes, X.shape[0]) * sd1
@@ -113,29 +122,28 @@ def trainNN(trainingFaces, trainingLabels):
             b2new = b2old - (learning_rate * gb2)
             curr_index += batch_size
 
-        print("X  = ", X.shape)
-        print("w1 = ", w1new.shape)
-        print("w2 = ", w2new.shape)
-        print("b1 = ", b1new.shape)
-        print("b2 = ", b2new.shape)
+        # print("X  = ", X.shape)
+        # print("w1 = ", w1new.shape)
+        # print("w2 = ", w2new.shape)
+        # print("b1 = ", b1new.shape)
+        # print("b2 = ", b2new.shape)
         yhat, z1, h1 = forwardProp(X, w1new, w2new, b1new, b2new)
         pc = fPC(y, yhat)
-        cross = 1#calculateCrossEntropy(y,yhat)
-        if e >= 0:
+        cross = calculateCrossEntropy(y,yhat)
+        if e >= epochs - 10:
             print("***  Epoch " + str(e) + " Statistics  ***")
             print("FPC = " + str(pc))
             print("Cross Entropy = " + str(cross))
             print()
 
-    Z_test = wnew.T.dot(testingFaces.T)
-    yhat_test = calculateYhat(Z_test)
-    pc_test = fpc(testingLabels.T, yhat_test)
-    cross_test = calculateCrossEntropy(testingLabels.T,yhat_test)
+
+    yhat_test, z1, h1 = forwardProp(testingFaces, w1new, w2new, b1new, b2new)
+    pc_test = fPC(testingLabels, yhat_test)
+    cross_test = calculateCrossEntropy(testingLabels,yhat_test)
 
     print ("*** Testing Set Results ***")
     print("FPC = " + str(pc_test))
     print("Cross Entropy = " + str(cross_test))
-
 
 if __name__ == "__main__":
     training_faces = np.load("mnist/mnist_train_images.npy")
@@ -144,6 +152,10 @@ if __name__ == "__main__":
     validation_labels = np.load("mnist/mnist_validation_labels.npy")
     testing_faces = np.load("mnist/mnist_test_images.npy")
     testing_labels = np.load("mnist/mnist_test_labels.npy")
+    neurons =  {30, 40, 50}
+    learning_rates = {0.001, 0.005, 0.01, 0.05, 0.1, 0.5}
+    minibatches = {16, 32, 64, 128, 256}
 
-    weights = trainNN(training_faces.T, training_labels.T)
+
+    weights = trainNN(training_faces.T, training_labels.T, testing_faces.T, testing_labels.T)
 
