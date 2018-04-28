@@ -70,21 +70,10 @@ def trainNN(trainingFaces, trainingLabels, testingFaces, testingLabels):
     np.random.set_state(state)
     np.random.shuffle(y)
 
-    # state = np.random.get_state()
-    # np.random.shuffle(testingFaces)
-    # np.random.set_state(state)
-    # np.random.shuffle(testingLabels)
-
-    # arrangement = np.arange(trainingFaces.shape[0])
-    # np.random.shuffle(arrangement)
-    # trainingFaces = trainingFaces[arrangement]
-    # trainingLabels = trainingLabels[arrangement]
-
-    learning_rate = 0.1
-    batch_size = 16
-    epochs = 30
-    n = y.shape[1]
-    num_batches = int(n/batch_size)
+    arrangement = np.arange(X.shape[0])
+    np.random.shuffle(arrangement)
+    X = X[arrangement]
+    y = y[arrangement]
 
     weights = np.random.randn(hidden_nodes, X.shape[0]) * sd1
     weights2 = np.random.randn(10,hidden_nodes) * sd2
@@ -99,7 +88,6 @@ def trainNN(trainingFaces, trainingLabels, testingFaces, testingLabels):
     b1new = np.copy(biases)
     b2new = np.copy(biases2)
     b2old = np.copy(biases2)
-
 
     for e in range(epochs):
         curr_index = 0
@@ -122,11 +110,7 @@ def trainNN(trainingFaces, trainingLabels, testingFaces, testingLabels):
             b2new = b2old - (learning_rate * gb2)
             curr_index += batch_size
 
-        # print("X  = ", X.shape)
-        # print("w1 = ", w1new.shape)
-        # print("w2 = ", w2new.shape)
-        # print("b1 = ", b1new.shape)
-        # print("b2 = ", b2new.shape)
+
         yhat, z1, h1 = forwardProp(X, w1new, w2new, b1new, b2new)
         pc = fPC(y, yhat)
         cross = calculateCrossEntropy(y,yhat)
