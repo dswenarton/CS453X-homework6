@@ -98,14 +98,9 @@ def updateWeights(X, y, weights, weights2, biases, biases2, hidden_nodes, learni
     return w1new, w2new, b1new, b2new, pc
 
 
-def trainNN(trainingFaces, trainingLabels):
+def trainNN(trainingFaces, trainingLabels, hidden_nodes=50, learning_rate=.2, batch_size=16, epochs=30, bl=False):
     X = trainingFaces
     y = trainingLabels
-
-    hidden_nodes = 50
-    learning_rate = 0.2
-    batch_size = 16
-    epochs = 30
 
     sd1 = 1./math.sqrt(X.shape[0])
     sd2 = 1./math.sqrt(hidden_nodes)
@@ -115,11 +110,11 @@ def trainNN(trainingFaces, trainingLabels):
     biases  = np.ones(hidden_nodes).reshape((hidden_nodes,1)) * .01
     biases2 = np.ones(10).reshape((10,1))  * .01
 
-    return updateWeights(X, y, weights, weights2, biases, biases2, hidden_nodes, learning_rate, batch_size, epochs, False)
+    return updateWeights(X, y, weights, weights2, biases, biases2, hidden_nodes, learning_rate, batch_size, epochs, bl)
 
 
 
-def findBestHyperParameters(X, y, w1, w2, b1, b2):
+def findBestHyperParameters(X, y, w1, w2, b1, b2, val_faces, val_labels):
     w1v = np.copy(w1)
     w2v = np.copy(w2)
     b2v = np.copy(b2)
@@ -136,10 +131,9 @@ def findBestHyperParameters(X, y, w1, w2, b1, b2):
     best_minibatches = 0
     best_epochs = 0
 
-    for i in range(20):
+    for i in range(10):
         print()
         print("*** Validation {} ***".format(i))
-        print()
 
         curr_neurons = neurons[int(np.random.rand()*3)]
         curr_learning = learning_rates[int(np.random.rand()*6)]
@@ -156,8 +150,15 @@ def findBestHyperParameters(X, y, w1, w2, b1, b2):
         b2 = np.copy(b2v)
         b1 = np.copy(b1v)
 
-        w1v, w2v, b1v, b2v, pc = updateWeights(X, y, w1, w2, b1, b2, curr_neurons, curr_learning, curr_minibatches, curr_epochs, bl=True)
-        
+        w1v, w2v, b1v, b2v, pc = trainNN(X, y, curr_neurons, curr_learning, curr_minibatches, curr_epochs, bl=True)
+        yhat, z1, h1 = forwardProp(val_faces, w1, w2, b1, b2)
+        pc = fPC(val_labels, yhat)
+        cross = calculateCrossEntropy(val_labels, yhat, w1, w2)
+
+        print("FPC = " + str(pc))
+        print("Cross Entropy = " + str(cross))
+        print()
+
         w1 = np.copy(w1v)
         w2 = np.copy(w2v)
         b2 = np.copy(b2v)
@@ -212,9 +213,9 @@ if __name__ == "__main__":
     np.random.set_state(rng_state)
     np.random.shuffle(validation_faces) #randomize both labels and images with same seed by resetting the state
     np.random.set_state(rng_state)
-    np.random.shuffle(validation_labels)
+    np.random.shuffle(validation_labels) 
 
     w1, w2, b1, b2, pc = trainNN(training_faces.T, training_labels.T)
-    w1, w2, b1, b2 = findBestHyperParameters(validation_faces.T, validation_labels.T, w1, w2, b1, b2)
+    w1, w2, b1, b2 = findBestHyperParameters(training_faces.T, training_labels.T, w1, w2, b1, b2, validation_faces.T, validation_labels.T)
     test(testing_faces.T, testing_labels.T, w1, w2, b1, b2)
 
