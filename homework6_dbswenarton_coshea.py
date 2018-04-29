@@ -48,26 +48,9 @@ def backProp(X, yhat, y, w2, z1, h1, batch_size):
     gw2 = (yhat - y).dot(h1.T)*(1./batch_size)
     return gb1, gb2, gw1, gw2
 
-
-def trainNN(trainingFaces, trainingLabels, testingFaces, testingLabels):
-    X = trainingFaces
-    y = trainingLabels
-
-    hidden_nodes = 40
-    learning_rate = 0.1
-    batch_size = 16
-    epochs = 30
-    
+def updateWeights(X, y, weights, weights2, biases, biases2, hidden_nodes, learning_rate, batch_size, epochs):
     n = y.shape[1]
     num_batches = int(n/batch_size)
-
-    sd1 = 1./math.sqrt(X.shape[0])
-    sd2 = 1./math.sqrt(hidden_nodes)
-
-    weights = np.random.randn(hidden_nodes, X.shape[0]) * sd1
-    weights2 = np.random.randn(10, hidden_nodes) * sd2
-    biases  = np.ones(hidden_nodes).reshape((hidden_nodes,1)) * .01
-    biases2 = np.ones(10).reshape((10,1))  * .01
 
     w1old = np.copy(weights)
     w1new = np.copy(weights)
@@ -77,6 +60,7 @@ def trainNN(trainingFaces, trainingLabels, testingFaces, testingLabels):
     b1new = np.copy(biases)
     b2new = np.copy(biases2)
     b2old = np.copy(biases2)
+    pc = 0
 
     for e in range(epochs):
         curr_index = 0
@@ -109,10 +93,69 @@ def trainNN(trainingFaces, trainingLabels, testingFaces, testingLabels):
             print("Cross Entropy = " + str(cross))
             print()
 
+    return w1new, w2new, b1new, b2new, pc
 
-    yhat_test, z1, h1 = forwardProp(testingFaces, w1new, w2new, b1new, b2new)
+
+def trainNN(trainingFaces, trainingLabels):
+    X = trainingFaces
+    y = trainingLabels
+
+    hidden_nodes = 40
+    learning_rate = 0.1
+    batch_size = 16
+    epochs = 30
+
+    sd1 = 1./math.sqrt(X.shape[0])
+    sd2 = 1./math.sqrt(hidden_nodes)
+
+    weights = np.random.randn(hidden_nodes, X.shape[0]) * sd1
+    weights2 = np.random.randn(10, hidden_nodes) * sd2
+    biases  = np.ones(hidden_nodes).reshape((hidden_nodes,1)) * .01
+    biases2 = np.ones(10).reshape((10,1))  * .01
+
+    return updateWeights(X, y, weights, weights2, biases, biases2, hidden_nodes, learning_rate, batch_size, epochs)
+
+
+
+def validate(X, y, w1, w2, b1, b2):
+    neurons =  [30, 40, 50]
+    learning_rates = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5]
+    minibatches = [16, 32, 64, 128, 256]
+    epochs = [20, 30, 40, 50]
+
+    best_fpc = 0.0
+    best_neurons = 0
+    best_learning = 0
+    best_minibatches = 0
+    best_epochs = 0
+
+    for i in range(10):
+        curr_neurons = neurons[int(abs(np.random.rand())*3)]
+        curr_learning = learning_rates[int(abs(np.random.rand())*6)]
+        curr_minibatches = minibatches[int(abs(np.random.rand())*5)]
+        curr_epochs = epochs[int(abs(np.random.rand())*4)]
+
+        w1, w2, b1, b2, pc = updateWeights(X, y, w1, w2, b1, b2, curr_neurons, curr_learning, curr_minibatches, curr_epochs)
+        if pc > best_fpc:
+            best_fpc = pc
+            best_neurons = curr_neurons
+            best_learning = curr_learning
+            best_minibatches = curr_minibatches
+            best_epochs = curr_epochs
+
+            print()
+            print("*** Validation Results ***")
+            print("Improved FPC = " + str(best_fpc));
+            print("Neurons = ", best_neurons)
+            print("Learning Rate = ", best_learning)
+            print("Batches = ", best_minibatches)
+            print("Epochs = ", best_epochs)
+            print()
+
+def test(testingFaces, testingLabels, w1, w2, b1, b2):
+    yhat_test, z1, h1 = forwardProp(testingFaces, w1, w2, b1, b2)
     pc_test = fPC(testingLabels, yhat_test)
-    cross_test = calculateCrossEntropy(testingLabels,yhat_test)
+    cross_test = calculateCrossEntropy(testingLabels, yhat_test)
 
     print ("*** Testing Set Results ***")
     print("FPC = " + str(pc_test))
@@ -125,10 +168,8 @@ if __name__ == "__main__":
     validation_labels = np.load("mnist/mnist_validation_labels.npy")
     testing_faces = np.load("mnist/mnist_test_images.npy")
     testing_labels = np.load("mnist/mnist_test_labels.npy")
-    neurons =  {30, 40, 50}
-    learning_rates = {0.001, 0.005, 0.01, 0.05, 0.1, 0.5}
-    minibatches = {16, 32, 64, 128, 256}
 
-
-    weights = trainNN(training_faces.T, training_labels.T, testing_faces.T, testing_labels.T)
+    w1, w2, b1, b2, pc = trainNN(training_faces.T, training_labels.T)
+    w1, w2, b1, b2 = validate(validation_faces.T, validation_labels.T, w1, w2, b1, b2)
+    test(testing_faces.T, testing_labels.T, w1, w2, b1, b2)
 
