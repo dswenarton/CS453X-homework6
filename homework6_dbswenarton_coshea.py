@@ -21,9 +21,9 @@ def relu(x):
     X[X <= 0] = 0
     return X
 
-def calculateCrossEntropy(y, yhat):
+def calculateCrossEntropy(y, yhat, w2, w1):
     size = y.shape[1]
-    return -(0.1/size) * np.sum(y*np.log(yhat))
+    return -(1./size) * np.sum(y*np.log(yhat)) 
 
 def forwardProp(X, w1new, w2new, b1new, b2new):
     z1 = w1new.dot(X) + b1new
@@ -32,14 +32,14 @@ def forwardProp(X, w1new, w2new, b1new, b2new):
     yhat = softmax(z2)
     return yhat, z1, h1
 
-def backProp(X, yhat, y, w2, z1, h1, batch_size):
+def backProp(X, yhat, y, w1, w2, z1, h1, batch_size):
     diff = (yhat-y).T
     diff = diff.dot(w2)
     z1t = z1.T
     z1t[z1t <= 0] = 0
     z1t[z1t > 0]  = 1
     gt = diff * z1t
-    
+
     gb1 = np.mean(gt.T, axis=1)
     gb2 = np.mean(yhat - y, axis=1)
     gb1 = gb1.reshape((len(gb1), 1))
@@ -47,8 +47,10 @@ def backProp(X, yhat, y, w2, z1, h1, batch_size):
     gw1 = gt.T.dot(X.T)* (1./batch_size)
     gw2 = (yhat - y).dot(h1.T)*(1./batch_size)
     return gb1, gb2, gw1, gw2
+    
 
-def updateWeights(X, y, weights, weights2, biases, biases2, hidden_nodes, learning_rate, batch_size, epochs):
+
+def updateWeights(X, y, weights, weights2, biases, biases2, hidden_nodes, learning_rate, batch_size, epochs, bl=False):
     n = y.shape[1]
     num_batches = int(n/batch_size)
 
@@ -70,7 +72,7 @@ def updateWeights(X, y, weights, weights2, biases, biases2, hidden_nodes, learni
 
             batch_yhat, z1, h1 = forwardProp(batch_X, w1new, w2new, b1new, b2new)
             
-            gb1, gb2, gw1, gw2 = backProp(batch_X, batch_yhat, batch_y, w2new, z1, h1, batch_size)
+            gb1, gb2, gw1, gw2 = backProp(batch_X, batch_yhat, batch_y, w1new, w2new, z1, h1, batch_size)
             
             w1old = np.copy(w1new)
             w2old = np.copy(w2new)
@@ -86,9 +88,9 @@ def updateWeights(X, y, weights, weights2, biases, biases2, hidden_nodes, learni
 
         yhat, z1, h1 = forwardProp(X, w1new, w2new, b1new, b2new)
         pc = fPC(y, yhat)
-        cross = calculateCrossEntropy(y,yhat)
-        if e >= epochs - 10:
-            print("***  Epoch " + str(e) + " Statistics  ***")
+        cross = calculateCrossEntropy(y,yhat, w1new, w2new)
+        if e >= epochs - 20 and not bl:
+            print("*** Epoch " + str(e+1) + " Statistics  ***")
             print("FPC = " + str(pc))
             print("Cross Entropy = " + str(cross))
             print()
@@ -100,8 +102,8 @@ def trainNN(trainingFaces, trainingLabels):
     X = trainingFaces
     y = trainingLabels
 
-    hidden_nodes = 40
-    learning_rate = 0.1
+    hidden_nodes = 50
+    learning_rate = 0.2
     batch_size = 16
     epochs = 30
 
@@ -113,11 +115,16 @@ def trainNN(trainingFaces, trainingLabels):
     biases  = np.ones(hidden_nodes).reshape((hidden_nodes,1)) * .01
     biases2 = np.ones(10).reshape((10,1))  * .01
 
-    return updateWeights(X, y, weights, weights2, biases, biases2, hidden_nodes, learning_rate, batch_size, epochs)
+    return updateWeights(X, y, weights, weights2, biases, biases2, hidden_nodes, learning_rate, batch_size, epochs, False)
 
 
 
-def validate(X, y, w1, w2, b1, b2):
+def findBestHyperParameters(X, y, w1, w2, b1, b2):
+    w1v = np.copy(w1)
+    w2v = np.copy(w2)
+    b2v = np.copy(b2)
+    b1v = np.copy(b1)
+
     neurons =  [30, 40, 50]
     learning_rates = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5]
     minibatches = [16, 32, 64, 128, 256]
@@ -129,13 +136,33 @@ def validate(X, y, w1, w2, b1, b2):
     best_minibatches = 0
     best_epochs = 0
 
-    for i in range(10):
-        curr_neurons = neurons[int(abs(np.random.rand())*3)]
-        curr_learning = learning_rates[int(abs(np.random.rand())*6)]
-        curr_minibatches = minibatches[int(abs(np.random.rand())*5)]
-        curr_epochs = epochs[int(abs(np.random.rand())*4)]
+    for i in range(20):
+        print()
+        print("*** Validation {} ***".format(i))
+        print()
 
-        w1, w2, b1, b2, pc = updateWeights(X, y, w1, w2, b1, b2, curr_neurons, curr_learning, curr_minibatches, curr_epochs)
+        curr_neurons = neurons[int(np.random.rand()*3)]
+        curr_learning = learning_rates[int(np.random.rand()*6)]
+        curr_minibatches = minibatches[int(np.random.rand()*5)]
+        curr_epochs = epochs[int(np.random.rand()*4)]
+
+        print("Neurons = ", curr_neurons)
+        print("Learning Rate = ", curr_learning)
+        print("Batches = ", curr_minibatches)
+        print("Epochs = ", curr_epochs)
+
+        w1 = np.copy(w1v)
+        w2 = np.copy(w2v)
+        b2 = np.copy(b2v)
+        b1 = np.copy(b1v)
+
+        w1v, w2v, b1v, b2v, pc = updateWeights(X, y, w1, w2, b1, b2, curr_neurons, curr_learning, curr_minibatches, curr_epochs, bl=True)
+        
+        w1 = np.copy(w1v)
+        w2 = np.copy(w2v)
+        b2 = np.copy(b2v)
+        b1 = np.copy(b1v)
+
         if pc > best_fpc:
             best_fpc = pc
             best_neurons = curr_neurons
@@ -144,19 +171,27 @@ def validate(X, y, w1, w2, b1, b2):
             best_epochs = curr_epochs
 
             print()
-            print("*** Validation Results ***")
-            print("Improved FPC = " + str(best_fpc));
+            print("*** Validation Results Update ***")
+            print("Improved FPC = ", best_fpc);
             print("Neurons = ", best_neurons)
             print("Learning Rate = ", best_learning)
             print("Batches = ", best_minibatches)
             print("Epochs = ", best_epochs)
             print()
+    print()
+    print("*** Final Hyperparameters ***")
+    print("fPC = ", best_fpc);
+    print("Neurons = ", best_neurons)
+    print("Learning Rate = ", best_learning)
+    print("Batches = ", best_minibatches)
+    print("Epochs = ", best_epochs)
+    return w1, w2, b1, b2
 
 def test(testingFaces, testingLabels, w1, w2, b1, b2):
     yhat_test, z1, h1 = forwardProp(testingFaces, w1, w2, b1, b2)
     pc_test = fPC(testingLabels, yhat_test)
-    cross_test = calculateCrossEntropy(testingLabels, yhat_test)
-
+    cross_test = calculateCrossEntropy(testingLabels, yhat_test, w1, w2)
+    print()
     print ("*** Testing Set Results ***")
     print("FPC = " + str(pc_test))
     print("Cross Entropy = " + str(cross_test))
@@ -169,7 +204,17 @@ if __name__ == "__main__":
     testing_faces = np.load("mnist/mnist_test_images.npy")
     testing_labels = np.load("mnist/mnist_test_labels.npy")
 
+    rng_state = np.random.get_state()
+    np.random.shuffle(training_faces) #randomize both labels and images with same seed by resetting the state
+    np.random.set_state(rng_state)
+    np.random.shuffle(training_labels)
+
+    np.random.set_state(rng_state)
+    np.random.shuffle(validation_faces) #randomize both labels and images with same seed by resetting the state
+    np.random.set_state(rng_state)
+    np.random.shuffle(validation_labels)
+
     w1, w2, b1, b2, pc = trainNN(training_faces.T, training_labels.T)
-    w1, w2, b1, b2 = validate(validation_faces.T, validation_labels.T, w1, w2, b1, b2)
+    w1, w2, b1, b2 = findBestHyperParameters(validation_faces.T, validation_labels.T, w1, w2, b1, b2)
     test(testing_faces.T, testing_labels.T, w1, w2, b1, b2)
 
