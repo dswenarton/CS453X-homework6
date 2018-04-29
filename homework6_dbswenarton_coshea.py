@@ -27,7 +27,6 @@ def calculateCrossEntropy(y, yhat):
 
 def forwardProp(X, w1new, w2new, b1new, b2new):
     z1 = w1new.dot(X) + b1new
-    #z1out = np.copy(z1)
     h1 = relu(z1)
     z2 = w2new.dot(h1) + b2new
     yhat = softmax(z2)
@@ -62,21 +61,11 @@ def trainNN(trainingFaces, trainingLabels, testingFaces, testingLabels):
     n = y.shape[1]
     num_batches = int(n/batch_size)
 
-    sd1 = 1./math.sqrt(X.shape[1])
+    sd1 = 1./math.sqrt(X.shape[0])
     sd2 = 1./math.sqrt(hidden_nodes)
 
-    state = np.random.get_state()
-    np.random.shuffle(X)
-    np.random.set_state(state)
-    np.random.shuffle(y)
-
-    arrangement = np.arange(X.shape[0])
-    np.random.shuffle(arrangement)
-    X = X[arrangement]
-    y = y[arrangement]
-
     weights = np.random.randn(hidden_nodes, X.shape[0]) * sd1
-    weights2 = np.random.randn(10,hidden_nodes) * sd2
+    weights2 = np.random.randn(10, hidden_nodes) * sd2
     biases  = np.ones(hidden_nodes).reshape((hidden_nodes,1)) * .01
     biases2 = np.ones(10).reshape((10,1))  * .01
 
