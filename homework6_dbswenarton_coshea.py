@@ -179,16 +179,23 @@ def findBestHyperParameters(X, y, w1, w2, b1, b2, val_faces, val_labels):
             print("Batches = ", best_minibatches)
             print("Epochs = ", best_epochs)
             print()
+
     print()
-    print("*** Final Hyperparameters ***")
+    print("*** Final Hyperparameters from Validation ***")
     print("fPC = ", best_fpc);
     print("Neurons = ", best_neurons)
     print("Learning Rate = ", best_learning)
     print("Batches = ", best_minibatches)
     print("Epochs = ", best_epochs)
+    print()
+    print("Retraining with optimized hyperparameters...")
+    print()
+    w1, w2, b1, b2, pc = trainNN(X, y, best_neurons, best_learning, best_minibatches, best_epochs, bl=False)
     return w1, w2, b1, b2
 
 def test(testingFaces, testingLabels, w1, w2, b1, b2):
+    print("Beginning testing...")
+    print()
     yhat_test, z1, h1 = forwardProp(testingFaces, w1, w2, b1, b2)
     pc_test = fPC(testingLabels, yhat_test)
     cross_test = calculateCrossEntropy(testingLabels, yhat_test, w1, w2)
@@ -198,12 +205,12 @@ def test(testingFaces, testingLabels, w1, w2, b1, b2):
     print("Cross Entropy = " + str(cross_test))
 
 if __name__ == "__main__":
-    training_faces = np.load("mnist/mnist_train_images.npy")
-    training_labels = np.load("mnist/mnist_train_labels.npy")
-    validation_faces = np.load("mnist/mnist_validation_images.npy")
-    validation_labels = np.load("mnist/mnist_validation_labels.npy")
-    testing_faces = np.load("mnist/mnist_test_images.npy")
-    testing_labels = np.load("mnist/mnist_test_labels.npy")
+    training_faces = np.load("mnist_train_images.npy")
+    training_labels = np.load("mnist_train_labels.npy")
+    validation_faces = np.load("mnist_validation_images.npy")
+    validation_labels = np.load("mnist_validation_labels.npy")
+    testing_faces = np.load("mnist_test_images.npy")
+    testing_labels = np.load("mnist_test_labels.npy")
 
     rng_state = np.random.get_state()
     np.random.shuffle(training_faces) #randomize both labels and images with same seed by resetting the state
